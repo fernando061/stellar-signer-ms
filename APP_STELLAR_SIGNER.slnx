@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/StellarSigner.IntegrationTests/StellarSigner.IntegrationTests.csproj" />
+    <Project Path="Tests/StellarSigner.SecurityTests/StellarSigner.SecurityTests.csproj" />
+    <Project Path="Tests/StellarSigner.UnitTests/StellarSigner.UnitTests.csproj" />
+  </Folder>
+  <Project Path="StellarSigner.Api/StellarSigner.Api.csproj" />
+  <Project Path="StellarSigner.Application/StellarSigner.Application.csproj" />
+  <Project Path="StellarSigner.Bootstrap/StellarSigner.Bootstrap.csproj" />
+  <Project Path="StellarSigner.Domain/StellarSigner.Domain.csproj" />
+  <Project Path="StellarSigner.Infrastructure/StellarSigner.Infrastructure.csproj" />
+</Solution>

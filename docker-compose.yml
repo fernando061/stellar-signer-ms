@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:17.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?set POSTGRES_ADMIN_PASSWORD}
+      SIGNER_DB_PASSWORD: ${SIGNER_DB_PASSWORD:?set SIGNER_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - signer_pgdata:/var/lib/postgresql/data
+      - ./docker/init-signer-role.sh:/docker-entrypoint-initdb.d/init-signer-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__SignerDb: Host=postgres;Port=5432;Database=stellar_signer;Username=signer;Password=${SIGNER_DB_PASSWORD:?set SIGNER_DB_PASSWORD}
+      SIGNER_WRAP_KEY: ${SIGNER_WRAP_KEY:-}
+      SIGNER_MASTER_KEY_FILE: /run/signer/master.enc
+      Stellar__Issuer: ${STELLAR_ISSUER:-}
+      Stellar__ContractId: ${STELLAR_CONTRACT_ID:-}
+      Stellar__MaxAmount: ${STELLAR_MAX_AMOUNT:-10000}
+      Stellar__MaxRemainingSeconds: ${STELLAR_MAX_REMAINING_SECONDS:-3600}
+      Jwt__Authority: ${JWT_AUTHORITY:-}
+      Jwt__Audience: ${JWT_AUDIENCE:-}
+    volumes:
+      - ./private/master.enc:/run/signer/master.enc:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+volumes:
+  signer_pgdata:

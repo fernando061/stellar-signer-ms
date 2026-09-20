@@ -1,0 +1,8 @@
+.vs/
+.tmp/
+**/bin/
+**/obj/
+.env
+private/
+*.user
+*.suo
