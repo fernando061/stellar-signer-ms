@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using FluentValidation;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using StellarSigner.Application.Abstractions.Blockchain;
 using StellarSigner.Application.Abstractions.Cryptography;
 using StellarSigner.Application.Abstractions.Persistence;
@@ -26,12 +28,14 @@ using StellarSigner.Infrastructure.DrivenAdapter.Stellar;
 
 var builder = WebApplication.CreateBuilder(args);
 var dbConnection = builder.Configuration.GetConnectionString("SignerDb") ?? throw new InvalidOperationException("ConnectionStrings:SignerDb is required");
-var authority = builder.Configuration["Jwt:Authority"] ?? throw new InvalidOperationException("Jwt:Authority is required");
+var issuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is required");
 var audience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience is required");
+var signingKey = builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey is required");
 var scope = builder.Configuration["Jwt:RequiredScope"] ?? "stellar-signer.execute";
-if (!Uri.TryCreate(authority, UriKind.Absolute, out var authorityUri) || authorityUri.Scheme != Uri.UriSchemeHttps ||
-    string.IsNullOrWhiteSpace(audience) || string.IsNullOrWhiteSpace(scope))
-    throw new InvalidOperationException("Valid HTTPS JWT authority, audience and scope are required");
+var allowedClientId = builder.Configuration["Jwt:AllowedClientId"] ?? "remittances-ms";
+if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience) || signingKey.Trim().Length < 32
+    || string.IsNullOrWhiteSpace(scope) || string.IsNullOrWhiteSpace(allowedClientId))
+    throw new InvalidOperationException("Valid JWT issuer, audience, signing key, client identity and scope are required");
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SIGNER_WRAP_KEY")) ||
     string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SIGNER_MASTER_KEY_FILE")))
     throw new InvalidOperationException("Master key configuration is required");
@@ -74,12 +78,13 @@ builder.Services.AddProblemDetails();
 if (builder.Environment.IsDevelopment()) builder.Services.AddOpenApi();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
 {
-    o.Authority = authority; o.Audience = audience;
-    o.RequireHttpsMetadata = true;
-    o.TokenValidationParameters.ValidateIssuer = true;
-    o.TokenValidationParameters.ValidateAudience = true;
-    o.TokenValidationParameters.ValidateLifetime = true;
-    o.TokenValidationParameters.ClockSkew = TimeSpan.FromSeconds(30);
+    o.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true, ValidIssuer = issuer, ValidateAudience = true, ValidAudience = audience,
+        ValidateLifetime = true, ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+        RequireExpirationTime = true, ClockSkew = TimeSpan.FromSeconds(30)
+    };
     o.Events = new JwtBearerEvents
     {
         OnChallenge = async context =>
@@ -97,7 +102,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 builder.Services.AddAuthorization(o => o.AddPolicy("StellarSigner.Execute", p => p.RequireAuthenticatedUser()
     .RequireAssertion(c => c.User.FindAll("scope").Concat(c.User.FindAll("scp"))
-        .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)).Contains(scope))));
+        .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)).Contains(scope)
+        && c.User.FindFirstValue("client_id") == allowedClientId)));
 var permitLimit = builder.Configuration.GetValue("RateLimit:PermitLimit", 30);
 if (permitLimit <= 0) throw new InvalidOperationException("Rate limit must be positive");
 builder.Services.AddRateLimiter(o =>

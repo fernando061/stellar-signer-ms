@@ -1,5 +1,14 @@
 # APP_STELLAR_SIGNER
 
+## JWT compartido con Remittances
+
+Para este MVP, `APP_REMITTANCES_MS` y el Signer validan la misma firma HMAC mediante
+`Jwt__SigningKey`. El Signer recibe un JWT interno de corta duración, emitido por Remittances con
+`Jwt__Issuer`, audiencia `Jwt__Audience=stellar-signer`, `client_id=remittances-ms` y scope
+`stellar-signer.execute`. No recibe ni acepta como sustituto el access token de un usuario final.
+Los valores `Jwt__Issuer`, `Jwt__Audience` y `Jwt__SigningKey` son obligatorios y deben llegar de
+la configuración externa; nunca se guardan claves en este repositorio.
+
 Para integrar este servicio desde `APP_REMITTANCES_MS`, comienza por [AGENTS.md](AGENTS.md): contiene el contrato HTTP, el XDR aceptado y las reglas de reintento.
 
 Microservicio interno .NET 9 para derivar cuentas Stellar Testnet de socios y firmar transacciones Soroban autorizadas. No administra remesas, no calcula montos comerciales, no ejecuta el contrato y no transmite transacciones a Horizon ni RPC. La API solo devuelve información pública de wallets o el XDR firmado tras validar el XDR recibido.
@@ -132,7 +141,7 @@ Consultar wallet: `GET /api/internal/v1/wallets/{partnerId}`. Consultar estado d
 
 ## Configuración y ejecución
 
-Variables obligatorias para la API: `ConnectionStrings__SignerDb`, `SIGNER_WRAP_KEY`, `SIGNER_MASTER_KEY_FILE`, `Stellar__Issuer` (G válido), `Stellar__ContractId` (C válido), `Jwt__Authority` y `Jwt__Audience`. Ajustes opcionales: `Jwt__RequiredScope`, `Stellar__MaxAmount`, `Stellar__MaxRemainingSeconds`, `RateLimit__PermitLimit`. `Stellar__NetworkPassphrase` solo admite la passphrase oficial de Testnet. `Stellar__MaxOperations` debe ser 1.
+Variables obligatorias para la API: `ConnectionStrings__SignerDb`, `SIGNER_WRAP_KEY`, `SIGNER_MASTER_KEY_FILE`, `Stellar__Issuer` (G válido), `Stellar__ContractId` (C válido), `Jwt__Issuer`, `Jwt__Audience` y `Jwt__SigningKey`. Ajustes opcionales: `Jwt__RequiredScope`, `Jwt__AllowedClientId`, `Stellar__MaxAmount`, `Stellar__MaxRemainingSeconds`, `RateLimit__PermitLimit`. `Stellar__NetworkPassphrase` solo admite la passphrase oficial de Testnet. `Stellar__MaxOperations` debe ser 1.
 
 Con PostgreSQL y el payload ya preparados:
 

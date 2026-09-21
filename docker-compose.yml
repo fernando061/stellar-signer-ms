@@ -32,8 +32,10 @@ services:
       Stellar__ContractId: ${STELLAR_CONTRACT_ID:-}
       Stellar__MaxAmount: ${STELLAR_MAX_AMOUNT:-10000}
       Stellar__MaxRemainingSeconds: ${STELLAR_MAX_REMAINING_SECONDS:-3600}
-      Jwt__Authority: ${JWT_AUTHORITY:-}
+      Jwt__Issuer: ${JWT_ISSUER:-}
       Jwt__Audience: ${JWT_AUDIENCE:-}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-}
+      Jwt__AllowedClientId: ${JWT_ALLOWED_CLIENT_ID:-remittances-ms}
     volumes:
       - ./private/master.enc:/run/signer/master.enc:ro
     ports:

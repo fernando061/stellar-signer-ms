@@ -6,7 +6,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using Microsoft.IdentityModel.Tokens;
 using System.Text.Encodings.Web;
 using StellarDotnetSdk;
 namespace StellarSigner.SecurityTests;
@@ -20,8 +22,9 @@ public sealed class ApiAuthenticationTests
             ["SIGNER_WRAP_KEY"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)),
             ["SIGNER_MASTER_KEY_FILE"] = Path.Combine(Path.GetTempPath(), "no-master-payload-for-auth-test"),
             ["ConnectionStrings__SignerDb"] = "Host=localhost;Database=unused;Username=unused;Password=unused",
-            ["Jwt__Authority"] = "https://issuer.invalid",
+            ["Jwt__Issuer"] = "remittances-tests",
             ["Jwt__Audience"] = "stellar-signer",
+            ["Jwt__SigningKey"] = new string('k', 32),
             ["Stellar__Issuer"] = "GDRXE2BQUC3AZNPVFSCEZ76NJ3WWL25FYFK6RGZGIEKWE4SOOHSUJUJ6",
             ["Stellar__ContractId"] = StrKey.EncodeContractId(new byte[32])
         };
@@ -36,6 +39,12 @@ public sealed class ApiAuthenticationTests
                 (await client.GetAsync("/api/internal/v1/wallets/00000000-0000-0000-0000-000000000001")).StatusCode);
             Assert.Equal(System.Net.HttpStatusCode.Unauthorized,
                 (await client.PostAsync("/api/internal/v1/signatures", new StringContent("{}"))).StatusCode);
+            using (var request = new HttpRequestMessage(HttpMethod.Post, "/api/internal/v1/wallets")
+            { Content = new StringContent("{}", Encoding.UTF8, "application/json") })
+            {
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", CreateMachineToken());
+                Assert.Equal(System.Net.HttpStatusCode.BadRequest, (await client.SendAsync(request)).StatusCode);
+            }
             await using var scopedFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
             {
                 host.UseEnvironment("Development");
@@ -65,8 +74,19 @@ public sealed class ApiAuthenticationTests
         {
             if (!Request.Headers.TryGetValue("X-Test-Scope", out var scope))
                 return Task.FromResult(AuthenticateResult.NoResult());
-            var identity = new ClaimsIdentity([new Claim("scope", scope.ToString()), new Claim("sub", "test-service")], Scheme.Name);
+            var identity = new ClaimsIdentity([new Claim("scope", scope.ToString()), new Claim("sub", "test-service"),
+                new Claim("client_id", "remittances-ms")], Scheme.Name);
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name)));
         }
+    }
+
+    private static string CreateMachineToken()
+    {
+        var now = DateTime.UtcNow;
+        var token = new JwtSecurityToken("remittances-tests", "stellar-signer",
+            [new Claim(JwtRegisteredClaimNames.Sub, "remittances-ms"), new Claim("client_id", "remittances-ms"),
+                new Claim("scope", "stellar-signer.execute")], now, now.AddMinutes(1),
+            new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(new string('k', 32))), SecurityAlgorithms.HmacSha256));
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

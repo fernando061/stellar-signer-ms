@@ -1,5 +1,12 @@
 # Contexto para agentes: APP_STELLAR_SIGNER
 
+## JWT interno compartido
+
+Para el MVP, Remittances emite un JWT interno corto con la misma firma HMAC configurada en ambos
+servicios. El Signer valida `Jwt__Issuer`, `Jwt__Audience`, `Jwt__SigningKey`,
+`client_id=remittances-ms` y el scope `stellar-signer.execute`. No se reenvía el token del usuario
+final, no intervienen refresh tokens y ningún secreto se incorpora al repositorio.
+
 Este archivo es el punto de entrada para integrar `APP_REMITTANCES_MS` con este servicio. Describe el contrato implementado en este repositorio; si el código cambia, actualiza este documento junto con el cambio. Lee también [README.md](README.md) para despliegue, configuración y migraciones.
 
 ## Responsabilidades y límite de confianza
@@ -11,7 +18,7 @@ Este archivo es el punto de entrada para integrar `APP_REMITTANCES_MS` con este 
 
 ## Contrato HTTP implementado
 
-Base local de Docker Compose: `http://127.0.0.1:8080`. Rutas internas bajo `/api/internal/v1`. En producción, usa una URL interna con HTTPS. Todos los endpoints siguientes devuelven JSON con propiedades `camelCase` y requieren `Authorization: Bearer <JWT>`; el JWT debe tener issuer y audience configurados en el Signer, no estar expirado y contener `stellar-signer.execute` en `scope` o `scp`. El Signer exige que `Jwt__Authority` sea HTTPS. El servicio consumidor necesita un emisor de JWT real y estable; no hay secreto compartido hardcodeado.
+Base local de Docker Compose: `http://127.0.0.1:8080`. Rutas internas bajo `/api/internal/v1`. En producción, usa una URL interna con HTTPS. Todos los endpoints siguientes devuelven JSON con propiedades `camelCase` y requieren `Authorization: Bearer <JWT>`; el JWT debe tener issuer y audience configurados en el Signer, no estar expirado, tener `client_id=remittances-ms` y contener `stellar-signer.execute` en `scope` o `scp`. Para este MVP se valida la firma HMAC compartida mediante `Jwt__SigningKey`; no hay secreto compartido hardcodeado.
 
 | Método y ruta | Solicitud | Respuesta satisfactoria |
 | --- | --- | --- |
