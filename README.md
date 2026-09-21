@@ -1,5 +1,7 @@
 # APP_STELLAR_SIGNER
 
+Para integrar este servicio desde `APP_REMITTANCES_MS`, comienza por [AGENTS.md](AGENTS.md): contiene el contrato HTTP, el XDR aceptado y las reglas de reintento.
+
 Microservicio interno .NET 9 para derivar cuentas Stellar Testnet de socios y firmar transacciones Soroban autorizadas. No administra remesas, no calcula montos comerciales, no ejecuta el contrato y no transmite transacciones a Horizon ni RPC. La API solo devuelve información pública de wallets o el XDR firmado tras validar el XDR recibido.
 
 ## Límite de confianza
