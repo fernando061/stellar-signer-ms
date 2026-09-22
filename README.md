@@ -145,9 +145,13 @@ Variables obligatorias para la API: `ConnectionStrings__SignerDb`, `SIGNER_WRAP_
 
 Con PostgreSQL y el payload ya preparados:
 
-```bash
-dotnet run --project StellarSigner.Api/StellarSigner.Api.csproj
+```powershell
+.\run-api.ps1
 ```
+
+`run-api.ps1` carga `.env`, traduce sus variables a la configuración de ASP.NET Core, usa PostgreSQL en `localhost:54329`, valida el payload `private/master.enc` y ejecuta la API en `http://127.0.0.1:5294`. No imprime secretos. Para revisar únicamente la configuración use `.\run-api.ps1 -ValidateOnly`; para reutilizar una compilación existente use `.\run-api.ps1 -NoBuild`. Puede seleccionar otro archivo con `-EnvironmentFile` y otro listener local con `-Urls`.
+
+Si `private/master.enc` todavía no existe, configure `SIGNER_WRAP_KEY` y `SIGNER_MASTER_KEY_FILE` en la sesión y ejecute una vez `dotnet run --project StellarSigner.Bootstrap/StellarSigner.Bootstrap.csproj`. La creación del material maestro es interactiva y no forma parte de `run-api.ps1`.
 
 Para usar Docker Compose local, rellene `.env`, coloque el payload cifrado en `private/master.enc` y ejecute `docker compose up --build -d`. Compose publica solo en `127.0.0.1`, usa un usuario PostgreSQL sin privilegios administrativos y un volumen persistente. Compose local usa `Development`; OpenAPI está disponible solo ahí. En Production configure un listener HTTPS y un certificado fuera del repositorio. La API rechaza peticiones HTTP en Production y no habilita CORS abierto.
 
