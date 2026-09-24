@@ -149,7 +149,9 @@ Con PostgreSQL y el payload ya preparados:
 .\run-api.ps1
 ```
 
-`run-api.ps1` carga `.env`, traduce sus variables a la configuración de ASP.NET Core, usa PostgreSQL en `localhost:54329`, valida el payload `private/master.enc` y ejecuta la API en `http://127.0.0.1:5294`. No imprime secretos. Para revisar únicamente la configuración use `.\run-api.ps1 -ValidateOnly`; para reutilizar una compilación existente use `.\run-api.ps1 -NoBuild`. Puede seleccionar otro archivo con `-EnvironmentFile` y otro listener local con `-Urls`.
+`run-api.ps1` carga `.env`, traduce sus variables a la configuración de ASP.NET Core, usa la conexión PostgreSQL configurada, valida el payload `private/master.enc` y ejecuta la API en `http://127.0.0.1:5294`. No imprime secretos. Para revisar únicamente la configuración use `.\run-api.ps1 -ValidateOnly`; para reutilizar una compilación existente use `.\run-api.ps1 -NoBuild`. Puede seleccionar otro archivo con `-EnvironmentFile` y otro listener local con `-Urls`.
+
+En Visual Studio Code Insiders, abra **Run and Debug**, seleccione `Stellar Signer API (run-api.ps1)` y presione `F5`. También puede abrir **Terminal > Run Task** y elegir `Stellar Signer: iniciar API` o `Stellar Signer: validar configuración`. Estas opciones ejecutan el mismo script y conservan la configuración externa definida para PostgreSQL.
 
 Si `private/master.enc` todavía no existe, configure `SIGNER_WRAP_KEY` y `SIGNER_MASTER_KEY_FILE` en la sesión y ejecute una vez `dotnet run --project StellarSigner.Bootstrap/StellarSigner.Bootstrap.csproj`. La creación del material maestro es interactiva y no forma parte de `run-api.ps1`.
 

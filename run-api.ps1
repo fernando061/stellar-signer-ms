@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$EnvironmentFile = (Join-Path $PSScriptRoot ".env"),
+    [string]$EnvironmentFile,
     [string]$Urls = "http://127.0.0.1:5294",
     [switch]$NoBuild,
     [switch]$ValidateOnly
@@ -8,6 +8,10 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($EnvironmentFile)) {
+    $EnvironmentFile = Join-Path $PSScriptRoot ".env"
+}
 
 function Import-DotEnv {
     param([Parameter(Mandatory)][string]$Path)
@@ -130,7 +134,7 @@ Set-ProcessEnvironmentValue "Jwt__RequiredScope" "stellar-signer.execute"
 Set-ProcessEnvironmentValue "RateLimit__PermitLimit" "30"
 
 Write-Host "Configuración local válida. API: $Urls"
-Write-Host "PostgreSQL: localhost:54329/stellar_signer"
+Write-Host "PostgreSQL: conexión configurada"
 Write-Host "Cliente JWT permitido: $jwtClientId"
 
 if ($ValidateOnly) {
