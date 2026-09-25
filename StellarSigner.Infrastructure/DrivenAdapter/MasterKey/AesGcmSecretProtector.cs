@@ -4,11 +4,11 @@ namespace StellarSigner.Infrastructure.DrivenAdapter.MasterKey;
 public sealed class AesGcmSecretProtector : ISecretProtector, IDisposable
 {
     private readonly byte[] _key;
-    public AesGcmSecretProtector()
+    public AesGcmSecretProtector(string encodedKey)
     {
-        var encoded = Environment.GetEnvironmentVariable("SIGNER_WRAP_KEY") ?? throw new InvalidOperationException("SIGNER_WRAP_KEY is required");
-        _key = Convert.FromBase64String(encoded);
-        if (_key.Length != 32) throw new InvalidOperationException("SIGNER_WRAP_KEY must be 32 bytes in base64");
+        if (string.IsNullOrWhiteSpace(encodedKey)) throw new InvalidOperationException("MasterKey:WrapKey is required");
+        _key = Convert.FromBase64String(encodedKey);
+        if (_key.Length != 32) throw new InvalidOperationException("MasterKey:WrapKey must be 32 bytes in base64");
     }
     public byte[] Protect(ReadOnlySpan<byte> plaintext)
     {

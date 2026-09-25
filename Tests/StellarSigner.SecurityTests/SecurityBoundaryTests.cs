@@ -18,22 +18,16 @@ public sealed class SecurityBoundaryTests
     [Fact]
     public void AesGcmDetectsCiphertextAndVersionTampering()
     {
-        var old = Environment.GetEnvironmentVariable("SIGNER_WRAP_KEY");
-        Environment.SetEnvironmentVariable("SIGNER_WRAP_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
-        try
-        {
-            using var protector = new AesGcmSecretProtector();
-            var plaintext = RandomNumberGenerator.GetBytes(65);
-            var encrypted = protector.Protect(plaintext);
-            Assert.NotEqual(Convert.ToHexString(plaintext), Convert.ToHexString(encrypted));
-            Assert.Equal(plaintext, protector.Unprotect(encrypted));
-            encrypted[^1] ^= 1;
-            Assert.ThrowsAny<CryptographicException>(() => protector.Unprotect(encrypted));
-            encrypted[0] = 2;
-            Assert.Throws<CryptographicException>(() => protector.Unprotect(encrypted));
-            CryptographicOperations.ZeroMemory(plaintext);
-        }
-        finally { Environment.SetEnvironmentVariable("SIGNER_WRAP_KEY", old); }
+        using var protector = new AesGcmSecretProtector(Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+        var plaintext = RandomNumberGenerator.GetBytes(65);
+        var encrypted = protector.Protect(plaintext);
+        Assert.NotEqual(Convert.ToHexString(plaintext), Convert.ToHexString(encrypted));
+        Assert.Equal(plaintext, protector.Unprotect(encrypted));
+        encrypted[^1] ^= 1;
+        Assert.ThrowsAny<CryptographicException>(() => protector.Unprotect(encrypted));
+        encrypted[0] = 2;
+        Assert.Throws<CryptographicException>(() => protector.Unprotect(encrypted));
+        CryptographicOperations.ZeroMemory(plaintext);
     }
     [Fact]
     public void MalformedXdrIsRejectedBeforeSigning()

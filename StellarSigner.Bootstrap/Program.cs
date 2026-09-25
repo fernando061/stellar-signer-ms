@@ -2,12 +2,35 @@ using System.Security.Cryptography;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
+using System.Text.Json;
 using NBitcoin;
 using StellarSigner.Infrastructure.DrivenAdapter.MasterKey;
 
-var path = Environment.GetEnvironmentVariable("SIGNER_MASTER_KEY_FILE") ?? throw new InvalidOperationException("SIGNER_MASTER_KEY_FILE is required");
+var workingDirectory = Directory.GetCurrentDirectory();
+var configurationPath = new[]
+{
+    Path.Combine(workingDirectory, "StellarSigner.Api", "appsettings.Local.json"),
+    Path.Combine(workingDirectory, "appsettings.Local.json")
+}.FirstOrDefault(File.Exists) ?? throw new InvalidOperationException("StellarSigner.Api/appsettings.Local.json is required");
+using var configuration = JsonDocument.Parse(File.ReadAllText(configurationPath));
+var root = configuration.RootElement;
+var masterKey = root.TryGetProperty("MasterKey", out var configuredMasterKey)
+    ? configuredMasterKey
+    : throw new InvalidOperationException("MasterKey configuration is required");
+var wrapKey = masterKey.TryGetProperty("WrapKey", out var configuredWrapKey)
+    ? configuredWrapKey.GetString()
+    : null;
+var configuredPath = masterKey.TryGetProperty("FilePath", out var configuredFilePath)
+    ? configuredFilePath.GetString()
+    : null;
+if (string.IsNullOrWhiteSpace(wrapKey) || string.IsNullOrWhiteSpace(configuredPath))
+    throw new InvalidOperationException("MasterKey:WrapKey and MasterKey:FilePath are required");
+var configurationDirectory = Path.GetDirectoryName(Path.GetFullPath(configurationPath))!;
+var path = Path.IsPathRooted(configuredPath)
+    ? configuredPath
+    : Path.GetFullPath(Path.Combine(configurationDirectory, configuredPath));
 if (File.Exists(path)) throw new InvalidOperationException("Master payload already exists; refusing to overwrite");
-using var protector = new AesGcmSecretProtector();
+using var protector = new AesGcmSecretProtector(wrapKey);
 var mnemonic = new Mnemonic(Wordlist.English, WordCount.TwentyFour);
 var seed = mnemonic.DeriveSeed();
 var master = HMACSHA512.HashData(Encoding.ASCII.GetBytes("ed25519 seed"), seed);

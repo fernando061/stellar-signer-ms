@@ -90,9 +90,9 @@ dotnet ef migrations add InitialCreate --project StellarSigner.Infrastructure --
 
 ## Material maestro y derivación
 
-`Bootstrap` genera una mnemonic BIP-39 de 24 palabras con NBitcoin, deriva la seed BIP-39 y obtiene el nodo maestro SLIP-0010 Ed25519. Muestra las palabras una sola vez, exige escribir `BACKED_UP` y guarda solo la clave privada maestra y el chain code en un payload versionado cifrado con AES-256-GCM. El nonce es aleatorio y la versión forma parte de los datos autenticados. La contraseña de envoltura `SIGNER_WRAP_KEY` debe ser base64 de **32 bytes aleatorios**, obtenida de un gestor de secretos o un generador criptográfico. No se guarda en el archivo, la base de datos ni la imagen. El archivo se crea sin sobrescritura, con permisos de usuario en Unix y una ACL exclusiva del operador en Windows. Si la API corre con otra cuenta, conceda acceso de lectura a esa cuenta de forma deliberada.
+`Bootstrap` genera una mnemonic BIP-39 de 24 palabras con NBitcoin, deriva la seed BIP-39 y obtiene el nodo maestro SLIP-0010 Ed25519. Muestra las palabras una sola vez, exige escribir `BACKED_UP` y guarda solo la clave privada maestra y el chain code en un payload versionado cifrado con AES-256-GCM. El nonce es aleatorio y la versión forma parte de los datos autenticados. `MasterKey:WrapKey` debe ser base64 de **32 bytes aleatorios**, obtenida de un gestor de secretos o un generador criptográfico. En Development se guarda en `appsettings.Local.json`, que está excluido de Git y Docker. El archivo maestro se crea sin sobrescritura, con permisos de usuario en Unix y una ACL exclusiva del operador en Windows. Si la API corre con otra cuenta, conceda acceso de lectura a esa cuenta de forma deliberada.
 
-Configure `SIGNER_WRAP_KEY` y `SIGNER_MASTER_KEY_FILE` en el entorno del operador, con la segunda apuntando a una ruta protegida fuera del repositorio. Ejecute una sola vez:
+Configure `MasterKey:WrapKey` y `MasterKey:FilePath` en `StellarSigner.Api/appsettings.Local.json`. Ejecute una sola vez:
 
 ```bash
 dotnet run --project StellarSigner.Bootstrap/StellarSigner.Bootstrap.csproj
@@ -141,7 +141,7 @@ Consultar wallet: `GET /api/internal/v1/wallets/{partnerId}`. Consultar estado d
 
 ## Configuración y ejecución
 
-Variables obligatorias para la API: `ConnectionStrings__SignerDb`, `SIGNER_WRAP_KEY`, `SIGNER_MASTER_KEY_FILE`, `Stellar__Issuer` (G válido), `Stellar__ContractId` (C válido), `Jwt__Issuer`, `Jwt__Audience` y `Jwt__SigningKey`. Ajustes opcionales: `Jwt__RequiredScope`, `Jwt__AllowedClientId`, `Stellar__MaxAmount`, `Stellar__MaxRemainingSeconds`, `RateLimit__PermitLimit`. `Stellar__NetworkPassphrase` solo admite la passphrase oficial de Testnet. `Stellar__MaxOperations` debe ser 1.
+La configuración local completa está en `StellarSigner.Api/appsettings.Local.json`: `ConnectionStrings:SignerDb`, `MasterKey`, `Stellar`, `Jwt`, `RateLimit` y `Urls`. `Stellar:NetworkPassphrase` solo admite la passphrase oficial de Testnet y `Stellar:MaxOperations` debe ser 1. El archivo se lee automáticamente en Development y debe permanecer fuera del repositorio.
 
 Con PostgreSQL y el payload ya preparados:
 
@@ -149,11 +149,11 @@ Con PostgreSQL y el payload ya preparados:
 .\run-api.ps1
 ```
 
-`run-api.ps1` carga `.env`, traduce sus variables a la configuración de ASP.NET Core, usa la conexión PostgreSQL configurada, valida el payload `private/master.enc` y ejecuta la API en `http://127.0.0.1:5294`. No imprime secretos. Para revisar únicamente la configuración use `.\run-api.ps1 -ValidateOnly`; para reutilizar una compilación existente use `.\run-api.ps1 -NoBuild`. Puede seleccionar otro archivo con `-EnvironmentFile` y otro listener local con `-Urls`.
+`run-api.ps1` valida `StellarSigner.Api/appsettings.Local.json` y el payload maestro, y después ejecuta la API. No crea ni traduce variables de entorno. Para revisar únicamente la configuración use `.\run-api.ps1 -ValidateOnly`; para reutilizar una compilación existente use `.\run-api.ps1 -NoBuild`.
 
 En Visual Studio Code Insiders, abra **Run and Debug**, seleccione `Stellar Signer API (run-api.ps1)` y presione `F5`. También puede abrir **Terminal > Run Task** y elegir `Stellar Signer: iniciar API` o `Stellar Signer: validar configuración`. Estas opciones ejecutan el mismo script y conservan la configuración externa definida para PostgreSQL.
 
-Si `private/master.enc` todavía no existe, configure `SIGNER_WRAP_KEY` y `SIGNER_MASTER_KEY_FILE` en la sesión y ejecute una vez `dotnet run --project StellarSigner.Bootstrap/StellarSigner.Bootstrap.csproj`. La creación del material maestro es interactiva y no forma parte de `run-api.ps1`.
+Si `private/master.enc` todavía no existe, complete la sección `MasterKey` de `appsettings.Local.json` y ejecute una vez `dotnet run --project StellarSigner.Bootstrap/StellarSigner.Bootstrap.csproj`. La creación del material maestro es interactiva y no forma parte de `run-api.ps1`.
 
 Para usar Docker Compose local, rellene `.env`, coloque el payload cifrado en `private/master.enc` y ejecute `docker compose up --build -d`. Compose publica solo en `127.0.0.1`, usa un usuario PostgreSQL sin privilegios administrativos y un volumen persistente. Compose local usa `Development`; OpenAPI está disponible solo ahí. En Production configure un listener HTTPS y un certificado fuera del repositorio. La API rechaza peticiones HTTP en Production y no habilita CORS abierto.
 

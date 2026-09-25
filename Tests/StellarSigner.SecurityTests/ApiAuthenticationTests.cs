@@ -19,8 +19,8 @@ public sealed class ApiAuthenticationTests
     {
         var values = new Dictionary<string, string?>
         {
-            ["SIGNER_WRAP_KEY"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)),
-            ["SIGNER_MASTER_KEY_FILE"] = Path.Combine(Path.GetTempPath(), "no-master-payload-for-auth-test"),
+            ["MasterKey__WrapKey"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)),
+            ["MasterKey__FilePath"] = Path.Combine(Path.GetTempPath(), "no-master-payload-for-auth-test"),
             ["ConnectionStrings__SignerDb"] = "Host=localhost;Database=unused;Username=unused;Password=unused",
             ["Jwt__Issuer"] = "remittances-tests",
             ["Jwt__Audience"] = "stellar-signer",

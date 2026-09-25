@@ -28,7 +28,7 @@ using StellarSigner.Infrastructure.DrivenAdapter.Stellar;
 
 var builder = WebApplication.CreateBuilder(args);
 if (builder.Environment.IsDevelopment())
-    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true).AddEnvironmentVariables();
 var dbConnection = builder.Configuration.GetConnectionString("SignerDb") ?? throw new InvalidOperationException("ConnectionStrings:SignerDb is required");
 var issuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is required");
 var audience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience is required");
@@ -38,9 +38,11 @@ var allowedClientId = builder.Configuration["Jwt:AllowedClientId"] ?? "remittanc
 if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience) || signingKey.Trim().Length < 32
     || string.IsNullOrWhiteSpace(scope) || string.IsNullOrWhiteSpace(allowedClientId))
     throw new InvalidOperationException("Valid JWT issuer, audience, signing key, client identity and scope are required");
-if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SIGNER_WRAP_KEY")) ||
-    string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SIGNER_MASTER_KEY_FILE")))
-    throw new InvalidOperationException("Master key configuration is required");
+var masterKeyWrapKey = builder.Configuration["MasterKey:WrapKey"] ?? throw new InvalidOperationException("MasterKey:WrapKey is required");
+var configuredMasterKeyFile = builder.Configuration["MasterKey:FilePath"] ?? throw new InvalidOperationException("MasterKey:FilePath is required");
+var masterKeyFile = Path.IsPathRooted(configuredMasterKeyFile)
+    ? configuredMasterKeyFile
+    : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, configuredMasterKeyFile));
 var config = builder.Configuration.GetSection("Stellar").Get<SigningConfiguration>() ?? new SigningConfiguration();
 var addressValidator = new StellarAddressValidator();
 if (!addressValidator.IsValidAccount(config.Issuer) || !addressValidator.IsValidContract(config.ContractId) ||
@@ -54,8 +56,9 @@ builder.Services.AddScoped<IUnitOfWork>(s => s.GetRequiredService<SignerDbContex
 builder.Services.AddScoped<IPartnerWalletRepository, PartnerWalletRepository>();
 builder.Services.AddScoped<ISigningRequestRepository, SigningRequestRepository>();
 builder.Services.AddScoped<IAuditRepository, AuditRepository>();
-builder.Services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();
-builder.Services.AddSingleton<IMasterKeyProvider, EncryptedMasterKeyProvider>();
+builder.Services.AddSingleton<ISecretProtector>(_ => new AesGcmSecretProtector(masterKeyWrapKey));
+builder.Services.AddSingleton<IMasterKeyProvider>(services =>
+    new EncryptedMasterKeyProvider(services.GetRequiredService<ISecretProtector>(), masterKeyFile));
 builder.Services.AddScoped<IKeyDerivationService, Slip10KeyDerivationService>();
 builder.Services.AddSingleton<ITransactionSigner, Ed25519TransactionSigner>();
 builder.Services.AddSingleton<ITransactionDecoder, StellarTransactionDecoder>();

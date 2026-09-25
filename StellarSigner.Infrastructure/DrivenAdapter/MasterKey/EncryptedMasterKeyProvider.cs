@@ -1,11 +1,10 @@
 using System.Security.Cryptography;
 using StellarSigner.Application.Abstractions.Cryptography;
 namespace StellarSigner.Infrastructure.DrivenAdapter.MasterKey;
-public sealed class EncryptedMasterKeyProvider(ISecretProtector protector) : IMasterKeyProvider
+public sealed class EncryptedMasterKeyProvider(ISecretProtector protector, string path) : IMasterKeyProvider
 {
     public MasterKeyMaterial Load()
     {
-        var path = Environment.GetEnvironmentVariable("SIGNER_MASTER_KEY_FILE") ?? throw new InvalidOperationException("SIGNER_MASTER_KEY_FILE is required");
         var encrypted = File.ReadAllBytes(path);
         try
         {
