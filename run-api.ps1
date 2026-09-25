@@ -69,7 +69,6 @@ function Set-ProcessEnvironmentValue {
 
 Import-DotEnv -Path $EnvironmentFile
 
-$databasePassword = Get-RequiredEnvironmentValue "SIGNER_DB_PASSWORD"
 $wrapKey = Get-RequiredEnvironmentValue "SIGNER_WRAP_KEY"
 $stellarIssuer = Get-RequiredEnvironmentValue "STELLAR_ISSUER"
 $stellarContractId = Get-RequiredEnvironmentValue "STELLAR_CONTRACT_ID"
@@ -118,7 +117,6 @@ if ([string]::IsNullOrWhiteSpace($maxRemainingSeconds)) { $maxRemainingSeconds =
 
 Set-ProcessEnvironmentValue "ASPNETCORE_ENVIRONMENT" "Development"
 Set-ProcessEnvironmentValue "ASPNETCORE_URLS" $Urls
-Set-ProcessEnvironmentValue "ConnectionStrings__SignerDb" "Host=localhost;Port=54329;Database=stellar_signer;Username=signer;Password=$databasePassword"
 Set-ProcessEnvironmentValue "SIGNER_MASTER_KEY_FILE" $masterKeyFile
 Set-ProcessEnvironmentValue "Stellar__Issuer" $stellarIssuer
 Set-ProcessEnvironmentValue "Stellar__ContractId" $stellarContractId
@@ -134,7 +132,7 @@ Set-ProcessEnvironmentValue "Jwt__RequiredScope" "stellar-signer.execute"
 Set-ProcessEnvironmentValue "RateLimit__PermitLimit" "30"
 
 Write-Host "Configuración local válida. API: $Urls"
-Write-Host "PostgreSQL: conexión configurada"
+Write-Host "PostgreSQL: appsettings.Local.json"
 Write-Host "Cliente JWT permitido: $jwtClientId"
 
 if ($ValidateOnly) {

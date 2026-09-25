@@ -43,7 +43,7 @@ Primero cree `.env` desde `.env.example` y asigne contraseñas aleatorias distin
 docker compose up -d postgres
 ```
 
-Configure `ConnectionStrings__SignerDb` en el shell que ejecutará `dotnet ef`. En Windows local: `Host=localhost;Port=54329;Database=stellar_signer;Username=signer;Password=<SIGNER_DB_PASSWORD>`. Dentro de Docker: `Host=postgres;Port=5432;Database=stellar_signer;Username=signer;Password=<SIGNER_DB_PASSWORD>`.
+En Development, copie `StellarSigner.Api/appsettings.Local.example.json` como `StellarSigner.Api/appsettings.Local.json` y configure allí `ConnectionStrings:SignerDb`. El archivo local está excluido de Git y Docker; la API y `DesignTimeSignerDbContextFactory` lo leen automáticamente. Para otros entornos puede seguir usando `ConnectionStrings__SignerDb`.
 
 Crear una migración nueva:
 

@@ -27,6 +27,8 @@ using StellarSigner.Infrastructure.DrivenAdapter.SigningPolicies;
 using StellarSigner.Infrastructure.DrivenAdapter.Stellar;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsDevelopment())
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 var dbConnection = builder.Configuration.GetConnectionString("SignerDb") ?? throw new InvalidOperationException("ConnectionStrings:SignerDb is required");
 var issuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is required");
 var audience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience is required");

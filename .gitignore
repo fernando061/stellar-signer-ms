@@ -3,6 +3,7 @@
 **/bin/
 **/obj/
 .env
+StellarSigner.Api/appsettings.Local.json
 private/
 *.user
 *.suo
